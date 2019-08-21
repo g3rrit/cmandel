@@ -8,20 +8,6 @@
 typedef unsigned int uint;
 
 typedef struct {
-  uint r;
-  uint g;
-  uint b;
-} color;
-
-color color_new(uint r, uint g, uint b) {
-  return (color) {
-    .r = r,
-    .g = g,
-    .b = b
-  };
-}
-
-typedef struct {
   double r;
   double i;
 } cpx;
@@ -48,7 +34,7 @@ cpx cpx_mul(cpx c0, cpx c1) {
 }
 
 cpx cpx_sqr(cpx c) {
-  cpx_mul(c, c);
+  return cpx_mul(c, c);
 }
 
 double cpx_abs(cpx c) {
@@ -66,7 +52,7 @@ double mf(cpx c) {
   return cpx_abs(z);
 }
 
-#define WIDTH 600
+#define WIDTH 800
 #define HEIGHT 800
 
 Display *d;
@@ -74,25 +60,12 @@ Window w;
 XEvent e;
 GC gc;
 Colormap cmap;
-const char *msg = "Hello, World!";
 int s;
 
 void draw_point(uint x, uint y) {
-  printf("drawing at: %d, %d\n", x, y);
   if(x >= WIDTH) return;
   if(y >= HEIGHT) return;
 
-  /*
-  XColor xcolor;
-  xcolor.red = c.r;
-  xcolor.green = c.g;
-  xcolor.blue = c.b;
-
-
-  XAllocColor(d, cmap, &xcolor);
-  XSetForeground(d, gc, xcolor.pixel);
-  XFillRectangle(d, w, DefaultGC(d, s), x, y, 10, 10);
-  */
   XDrawPoint(d, w, gc, x, y);
   XFlush(d);
 }
@@ -108,35 +81,38 @@ void clear_screen() {
 }
 
 #define M_THRESH 10
-void draw_mandel() {
-  double sec_x = -1;
-  double sec_y = 1;
-  double sec_w = 2;
-  double sec_h = 2;
-  double d = 0.001;
-
-  double dw = WIDTH / sec_w;
-  double dh = HEIGHT / sec_h;
-  for(double x = sec_x; x < sec_x + sec_w; x += d) {
-    for(double y = sec_y; y > sec_y - sec_h; y -= d) {
-      printf("mandelf(%f, %f): %f\n", x, y, mf(cpx_new(x, y)));
-      if(mf(cpx_new(x, y)) <= M_THRESH) {
-        double dx = fabs(x - sec_x) / sec_w;
-        double dy = fabs(y + sec_y) / sec_h;
-
-        draw_point(
-          (int) (dx * WIDTH),
-          (int) (dy * HEIGHT));
+void draw_mandel(double sec_x, double sec_y, double sec_w, double sec_h) {
+  double sx = 0;
+  double sy = 0;
+  for(int x = 0; x < WIDTH; x++) {
+    for(int y = 0; y < HEIGHT; y++) {
+      double dx = ((double) x) / WIDTH;
+      double dy = ((double) y) / HEIGHT;
+      sx = sec_x + (dx * sec_w);
+      sy = sec_y - (dy * sec_h);
+      if(mf(cpx_new(sx, sy)) <= M_THRESH) {
+        draw_point(x, y);
       }
-
     }
   }
 
   return;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  if(argc <= 4) {
+    printf("usage: ./mandel x y w h\n");
+    return 0;
+  }
 
+  double sec_x;
+  double sec_y;
+  double sec_w;
+  double sec_h;
+  sscanf(argv[1], "%lf", &sec_x);
+  sscanf(argv[2], "%lf", &sec_y);
+  sscanf(argv[3], "%lf", &sec_w);
+  sscanf(argv[4], "%lf", &sec_h);
 
   d = XOpenDisplay(NULL);
   if (d == NULL) {
@@ -154,16 +130,10 @@ int main(void) {
 
   gc = DefaultGC(d, s);
 
-  while (1) {
+  for(;;) {
     XNextEvent(d, &e);
     if (e.type == Expose) {
-      color c = (color) {
-        .r = 90000,
-        .g = 20000,
-        .b = 30000,
-      };
-      draw_point(200, 10);
-      draw_mandel();
+      draw_mandel(sec_x, sec_y, sec_w, sec_h);
     }
     if (e.type == KeyPress)
       break;
